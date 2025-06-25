@@ -78,7 +78,7 @@ function App() {
       const result = await response.json();
       console.log(result);
       if (response.ok) {
-        setUploadStatus("File uploaded successfully!");
+        setUploadStatus("✅ File uploaded successfully!");
         setPolicyId("");
         setSelectedFile(null);
         // Reset file input
@@ -127,7 +127,7 @@ function App() {
                   type="text"
                   value={policyId}
                   onChange={(e) => setPolicyId(e.target.value)}
-                  placeholder="Enter Policy ID (e.g., POL-2024-001)"
+                  placeholder="Enter Policy ID"
                   className="w-full px-4 py-3 bg-white/50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 text-gray-900 placeholder-gray-500"
                   required
                 />
@@ -223,7 +223,7 @@ function App() {
                   ? "bg-red-50 text-red-800 border border-red-200" 
                   : "bg-blue-50 text-blue-800 border border-blue-200"
               }`}>
-                {uploadStatus.includes("File uploaded successfully!") && (
+                {uploadStatus.includes("✅ File uploaded successfully!") && (
                   <svg className="w-5 h-5 mr-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>

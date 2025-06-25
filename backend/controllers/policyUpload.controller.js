@@ -15,26 +15,31 @@ const EMAIL_RECIPIENTS = emailData.email;
 // === Email Configuration ===
 const createEmailTransporter = () => {
     // Debug environment variables
-    console.log('Environment Check:');
-    console.log('   Gmail User:', process.env.GMAIL_USER ? 'SET' : 'NOT SET');
-    console.log('   Gmail App Password:', process.env.GMAIL_APP_PASSWORD ? `SET (${process.env.GMAIL_APP_PASSWORD.length} chars)` : 'NOT SET');
+    // console.log('Environment Check:');
+    // console.log('   Mail Host:', process.env.MAIL_HOST ? 'SET' : 'NOT SET');
+    // console.log('   Mail Username:', process.env.MAIL_USERNAME ? 'SET' : 'NOT SET');
+    // console.log('   Mail Password:', process.env.MAIL_PASSWORD ? `SET (${process.env.MAIL_PASSWORD.length} chars)` : 'NOT SET');
+    // console.log('   Mail From Address:', process.env.MAIL_FROM_ADDRESS ? 'SET' : 'NOT SET');
     
-    const gmailConfig = {
-        service: 'gmail',
+    const smtpConfig = {
+        host: process.env.MAIL_HOST,
+        port: parseInt(process.env.MAIL_PORT) || 587,
+        secure: process.env.MAIL_ENCRYPTION === 'ssl', // true for SSL (port 465), false for TLS
         auth: {
-            user: process.env.GMAIL_USER,
-            pass: process.env.GMAIL_APP_PASSWORD
+            user: process.env.MAIL_USERNAME,
+            pass: process.env.MAIL_PASSWORD
+        },
+        tls: {
+            ciphers: 'SSLv3'
         }
     };
 
-    if (!process.env.GMAIL_USER || !process.env.GMAIL_APP_PASSWORD) {
-        console.log('Warning: Gmail credentials not found in environment variables');
-        console.log('   Make sure your .env file contains:');
-        console.log('   GMAIL_USER=your-email@gmail.com');
-        console.log('   GMAIL_APP_PASSWORD=your-16-character-app-password');
+    if (!process.env.MAIL_HOST || !process.env.MAIL_USERNAME || !process.env.MAIL_PASSWORD) {
+        console.log('Warning: Zepto Mail SMTP credentials not found in environment variables');
+        console.log('Required variables: MAIL_HOST, MAIL_USERNAME, MAIL_PASSWORD, MAIL_FROM_ADDRESS');
     }
 
-    return nodemailer.createTransport(gmailConfig);
+    return nodemailer.createTransport(smtpConfig);
 };
 
 // === Email Sending Function ===
@@ -50,7 +55,7 @@ const sendUploadNotification = async (fileName, policyId, filePath) => {
         }
         
         const mailOptions = {
-            from: process.env.GMAIL_USER,
+            from: `${process.env.MAIL_FROM_NAME || 'LEXSHIP'} <${process.env.MAIL_FROM_ADDRESS}>`,
             to: EMAIL_RECIPIENTS,
             subject: `New Policy PDF Uploaded - ${policyId}`,
             html: `
@@ -102,11 +107,12 @@ const sendUploadNotification = async (fileName, policyId, filePath) => {
         
         // Provide helpful error messages
         if (error.code === 'EAUTH') {
-            console.log('Gmail Authentication Failed. Please check:');
-            console.log('   1. Your Gmail credentials in .env file');
-            console.log('   2. Make sure you\'re using an App Password (not regular password)');
-            console.log('   3. 2-Factor Authentication is enabled on Gmail');
-            console.log('   4. App Password format: "abcd efgh ijkl mnop" (with spaces)');
+            console.log('Zepto Mail Authentication Failed. Please check:');
+            console.log('   1. Your Zepto Mail credentials in .env file');
+            console.log('   2. Make sure MAIL_USERNAME is set to "emailapikey"');
+            console.log('   3. Make sure MAIL_PASSWORD contains your Zepto Mail token');
+            console.log('   4. Verify MAIL_HOST is set to "smtp.zeptomail.in"');
+            console.log('   5. Check that MAIL_FROM_ADDRESS is a verified domain in Zepto Mail');
         }
         
         return false;
@@ -194,7 +200,7 @@ const uploadPolicyPDF = async (req, res) => {
                 file_size_mb: (req.file.size / (1024 * 1024)).toFixed(2),
                 upload_time: new Date().toISOString(),
                 email_sent: emailSent,
-                email_recipients: emailSent ? [EMAIL_RECIPIENTS] : []
+                email_recipients: emailSent ? (Array.isArray(EMAIL_RECIPIENTS) ? EMAIL_RECIPIENTS : [EMAIL_RECIPIENTS]) : []
             }
         });
 

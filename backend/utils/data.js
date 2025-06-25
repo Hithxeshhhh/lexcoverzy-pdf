@@ -1,6 +1,8 @@
 const emailData = {
-    "email": "hithesh914@gmail.com",
-    
+    "email": [
+        "hithesh914@gmail.com",
+        
+    ]
 }
 
 module.exports = emailData;
