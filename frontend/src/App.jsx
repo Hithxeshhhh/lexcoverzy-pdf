@@ -7,6 +7,12 @@ function App() {
   const [uploadStatus, setUploadStatus] = useState("");
   const [dragActive, setDragActive] = useState(false);
 
+  // Dynamic URL selection based on environment
+  let url = '';
+  if (import.meta.env.VITE_ENV === 'prod') url = import.meta.env.VITE_API_BASE_URL_PROD;
+  else if (import.meta.env.VITE_ENV === 'dev') url = import.meta.env.VITE_BACKEND_DEV;
+  else url = import.meta.env.VITE_API_BASE_URL_LOCAL;
+
   const handleFileChange = (e) => {
     const file = e.target.files[0];
     if (file && file.type === "application/pdf") {
@@ -67,7 +73,7 @@ function App() {
       formData.append("file", selectedFile);
       
 
-      const response = await fetch(import.meta.env.VITE_API_BASE_URL_LOCAL, {
+      const response = await fetch(`${url}/api/upload-policy-pdf`, {
         method: "POST",
         headers: {
           "x-api-key": import.meta.env.VITE_UPLOAD_API,

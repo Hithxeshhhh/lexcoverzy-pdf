@@ -184,15 +184,15 @@ router.get('/pdf-info/:filename', validateAdminApiKey, (req, res) => {
 });
 
 // Download specific file by policy ID
-router.post('/download-pdf', validateAdminApiKey, (req, res) => {
+router.get('/download-pdf/:policy_id', validateAdminApiKey, (req, res) => {
     try {
-        const { policy_id } = req.body;
+        const { policy_id } = req.params;
         
         if (!policy_id || policy_id.trim() === '') {
             return res.status(400).json({
                 success: false,
                 error: "Policy ID is required",
-                hint: "Provide 'policy_id' in the request body"
+                hint: "Provide 'policy_id' as a URL parameter"
             });
         }
         
@@ -328,12 +328,13 @@ router.get('/upload-status', validateAdminApiKey, (req, res) => {
 //         message: "LexCoverzy PDF Upload API Documentation",
 //         endpoints: {
 //             "POST /api/upload-policy-pdf": {
-//                 description: "Upload a PDF file",
+//                 description: "Upload a PDF file and notify external API",
 //                 headers: { "x-api-key": "Required - Upload API Key" },
 //                 body: {
 //                     "file": "PDF file (multipart/form-data)",
 //                     "policy_id": "Unique policy identifier"
-//                 }
+//                 },
+//                 notes: "Automatically sends email notification and notifies external API with download URL"
 //             },
 //             "GET /api/list-pdfs": {
 //                 description: "Get list of all uploaded files",
@@ -349,6 +350,11 @@ router.get('/upload-status', validateAdminApiKey, (req, res) => {
 //                 body: {
 //                     "policy_id": "Policy identifier (e.g., POL123)"
 //                 },
+//                 response: "Binary PDF file download"
+//             },
+//             "GET /api/download-pdf/:policy_id": {
+//                 description: "Download PDF by policy ID (legacy GET method)",
+//                 headers: { "x-api-key": "Required - Admin API Key Value" },
 //                 response: "Binary PDF file download"
 //             },
 //             "DELETE /api/delete-pdf/:filename": {
@@ -368,6 +374,17 @@ router.get('/upload-status', validateAdminApiKey, (req, res) => {
 //             "note": "Both upload and admin operations use x-api-key header with different values",
 //             "upload_operations": "x-api-key: [Upload Key Value] - For PDF upload",
 //             "admin_operations": "x-api-key: [Admin Key Value] - For management operations"
+//         },
+//         external_integration: {
+//             "description": "After successful upload, the system notifies an external API",
+//             "environment_variables": {
+//                 "PDF_UPLOAD_LEX_API": "External API endpoint URL (required)",
+//                 "PDF_UPLOAD_LEX_API_KEY": "Authorization token for external API (optional)"
+//             },
+//             "payload": {
+//                 "policy_id": "The uploaded policy ID",
+//                 "url": "Production download URL in format: https://lexcoverzy.upload.lexship.biz/api/download-pdf/{policy_id}"
+//             }
 //         }
 //     });
 // });

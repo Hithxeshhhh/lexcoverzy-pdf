@@ -3,6 +3,7 @@ const path = require('path');
 const nodemailer = require('nodemailer');
 const emailData = require('../utils/data');
 const dotenv = require('dotenv');
+const axios = require('axios');
 
 dotenv.config();
 
@@ -10,7 +11,8 @@ dotenv.config();
 const EXPECTED_API_KEY = process.env.X_API_KEY;
 const ADMIN_API_KEY = process.env.ADMIN_API_KEY;
 const UPLOAD_DIR = path.join(__dirname, '../uploads/coverzy');
-const EMAIL_RECIPIENTS = emailData.email;
+
+
 
 // === Email Configuration ===
 const createEmailTransporter = () => {
@@ -36,10 +38,60 @@ const createEmailTransporter = () => {
 
     if (!process.env.MAIL_HOST || !process.env.MAIL_USERNAME || !process.env.MAIL_PASSWORD) {
         console.log('Warning: Zepto Mail SMTP credentials not found in environment variables');
-        console.log('Required variables: MAIL_HOST, MAIL_USERNAME, MAIL_PASSWORD, MAIL_FROM_ADDRESS');
     }
 
     return nodemailer.createTransport(smtpConfig);
+};
+
+// === External API Notification Function ===
+const notifyExternalAPI = async (policyId) => {
+    try {
+        const externalApiUrl = process.env.PDF_UPLOAD_LEX_API;
+        if (!externalApiUrl) {
+            console.log(' Warning: PDF_UPLOAD_LEX_API not configured in environment variables');
+            return false;
+        }
+
+        const downloadUrl = `https://lexcoverzy.upload.lexship.biz/api/download-pdf/${policyId}`;
+        
+        const payload = {
+            policy_id: policyId,
+            url: downloadUrl
+        };
+
+        console.log(` Notifying external API: ${externalApiUrl}`);
+        console.log(` Payload:`, payload);
+
+        const headers = {
+            'Content-Type': 'application/json'
+        };
+
+        // Add authorization header if needed
+        if (process.env.PDF_UPLOAD_LEX_API_KEY) {
+            headers['Authorization'] = `Bearer ${process.env.PDF_UPLOAD_LEX_API_KEY}`;
+        }
+
+        const response = await axios.post(externalApiUrl, payload, {
+            headers: headers,
+            timeout: 10000 // 10 second timeout
+        });
+
+        console.log(` External API notification successful:`, response.data);
+        return true;
+
+    } catch (error) {
+        if (error.response) {
+            // The request was made and the server responded with a status code outside 2xx
+            console.error(` External API notification failed (${error.response.status}):`, error.response.data);
+        } else if (error.request) {
+            // The request was made but no response was received
+            console.error(' External API notification failed: No response received');
+        } else {
+            // Something happened in setting up the request
+            console.error(' Error notifying external API:', error.message);
+        }
+        return false;
+    }
 };
 
 // === Email Sending Function ===
@@ -47,27 +99,31 @@ const sendUploadNotification = async (fileName, policyId, filePath) => {
     try {
         console.log(`Sending email notification with attachment for file: ${fileName}`);
         
+        // Fetch admin email dynamically
+        const adminEmail = await emailData.getAdminEmail();
+        console.log(` Using admin email: ${adminEmail}`);
+        
         const transporter = createEmailTransporter();
         
         // Check if file exists before attaching
         if (!fs.existsSync(filePath)) {
-            console.log(`⚠️ Warning: File not found at ${filePath}, sending email without attachment`);
+            console.log(`   Warning: File not found at ${filePath}, sending email without attachment`);
         }
         
         const mailOptions = {
             from: `${process.env.MAIL_FROM_NAME || 'LEXSHIP'} <${process.env.MAIL_FROM_ADDRESS}>`,
-            to: EMAIL_RECIPIENTS,
+            to: adminEmail,
             subject: `New Policy PDF Uploaded - ${policyId}`,
             html: `
                 <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
                     <h2 style="color: #2c3e50; border-bottom: 2px solid #3498db; padding-bottom: 10px;">
-                        📄 Policy PDF Upload Notification
+                             Policy PDF Upload Notification
                     </h2>
                     
                     <div style="background-color: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0;">
-                        <p><strong>📋 Policy ID:</strong> <code>${policyId}</code></p>
-                        <p><strong>📁 File Name:</strong> <code>${fileName}</code></p>
-                        <p><strong>⏰ Upload Time:</strong> ${new Date().toLocaleString()}</p>
+                        <p><strong>Policy ID:</strong> <code>${policyId}</code></p>
+                        <p><strong>File Name:</strong> <code>${fileName}</code></p>
+                        <p><strong>Upload Time:</strong> ${new Date().toLocaleString()}</p>
                     </div>
                     
                     <div style="background-color: #d4edda; padding: 15px; border-radius: 8px; border-left: 4px solid #28a745;">
@@ -154,7 +210,7 @@ const validateAdminApiKey = (req, res, next) => {
 // === Main Upload Controller ===
 const uploadPolicyPDF = async (req, res) => {
     try {
-        console.log(`📤 Processing file upload...`);
+        console.log(` Processing file upload...`);
         
         // Ensure upload directory exists
         if (!fs.existsSync(UPLOAD_DIR)) {
@@ -189,6 +245,12 @@ const uploadPolicyPDF = async (req, res) => {
         // Send email notification with PDF attachment
         const emailSent = await sendUploadNotification(uniqueName, policyId, targetFile);
 
+        // Notify external API with policy details
+        const externalApiNotified = await notifyExternalAPI(policyId);
+
+        // Get admin email for response (use cached version for faster response)
+        const adminEmail = emailData.getCachedEmail();
+
         // Success response
         res.json({
             success: true,
@@ -200,7 +262,9 @@ const uploadPolicyPDF = async (req, res) => {
                 file_size_mb: (req.file.size / (1024 * 1024)).toFixed(2),
                 upload_time: new Date().toISOString(),
                 email_sent: emailSent,
-                email_recipients: emailSent ? (Array.isArray(EMAIL_RECIPIENTS) ? EMAIL_RECIPIENTS : [EMAIL_RECIPIENTS]) : []
+                email_recipients: emailSent ? [adminEmail] : [],
+                external_api_notified: externalApiNotified,
+                download_url: `https://lexcoverzy.upload.lexship.biz/api/download-pdf/${policyId}`
             }
         });
 
