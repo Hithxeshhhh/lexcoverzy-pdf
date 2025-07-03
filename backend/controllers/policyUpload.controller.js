@@ -67,11 +67,11 @@ const notifyExternalAPI = async (policyId) => {
         };
 
         // Add authorization header if needed
-        if (process.env.PDF_UPLOAD_LEX_API_KEY) {
-            headers['Authorization'] = `Bearer ${process.env.PDF_UPLOAD_LEX_API_KEY}`;
+        if (process.env.BEARER_TOKEN) {
+            headers['Authorization'] = `Bearer ${process.env.BEARER_TOKEN}`;
         }
 
-        const response = await axios.post(externalApiUrl, payload, {
+        const response = await axios.put(externalApiUrl, payload, {
             headers: headers,
             timeout: 10000 // 10 second timeout
         });
@@ -82,7 +82,12 @@ const notifyExternalAPI = async (policyId) => {
     } catch (error) {
         if (error.response) {
             // The request was made and the server responded with a status code outside 2xx
-            console.error(` External API notification failed (${error.response.status}):`, error.response.data);
+            if (error.response.status === 404) {
+                console.log(` Policy ID not found in external system (404):`, error.response.data);
+                console.log(` This is expected if the policy doesn't exist in their system yet`);
+            } else {
+                console.error(` External API notification failed (${error.response.status}):`, error.response.data);
+            }
         } else if (error.request) {
             // The request was made but no response was received
             console.error(' External API notification failed: No response received');
