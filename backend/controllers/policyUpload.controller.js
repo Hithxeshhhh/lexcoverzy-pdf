@@ -104,9 +104,9 @@ const sendUploadNotification = async (fileName, policyId, filePath) => {
     try {
         console.log(`Sending email notification with attachment for file: ${fileName}`);
         
-        // Fetch admin email dynamically
+        // Fetch admin email(s) dynamically
         const adminEmail = await emailData.getAdminEmail();
-        console.log(` Using admin email: ${adminEmail}`);
+        console.log(`📧 Using admin email(s): ${adminEmail}`);
         
         const transporter = createEmailTransporter();
         
@@ -253,8 +253,8 @@ const uploadPolicyPDF = async (req, res) => {
         // Notify external API with policy details
         const externalApiNotified = await notifyExternalAPI(policyId);
 
-        // Get admin email for response (use cached version for faster response)
-        const adminEmail = emailData.getCachedEmail();
+        // Get admin emails for response (use cached version for faster response)
+        const adminEmails = emailData.getCachedEmailsArray();
 
         // Success response
         res.json({
@@ -267,7 +267,7 @@ const uploadPolicyPDF = async (req, res) => {
                 file_size_mb: (req.file.size / (1024 * 1024)).toFixed(2),
                 upload_time: new Date().toISOString(),
                 email_sent: emailSent,
-                email_recipients: emailSent ? [adminEmail] : [],
+                email_recipients: emailSent ? adminEmails : [],
                 external_api_notified: externalApiNotified,
                 download_url: `https://lexcoverzy.upload.lexship.biz/api/download-pdf/${policyId}`
             }

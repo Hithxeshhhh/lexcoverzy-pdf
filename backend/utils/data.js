@@ -36,14 +36,15 @@ const fetchAdminEmail = async () => {
         });
 
         if (response.data && response.data.success && response.data.data && response.data.data.length > 0) {
-            const adminEmail = response.data.data[0].admin_email;
+            // Handle both old format (admin_email) and new format (admin_emails)
+            const adminEmailsData = response.data.data[0].admin_emails || response.data.data[0].admin_email;
             
-            if (adminEmail) {
-                // Cache the email
-                cachedEmail = adminEmail;
+            if (adminEmailsData) {
+                // Cache the emails
+                cachedEmail = adminEmailsData;
                 cacheTimestamp = Date.now();
-                console.log(' Admin email fetched successfully:', adminEmail);
-                return adminEmail;
+                console.log('✅ Admin emails fetched successfully:', adminEmailsData);
+                return adminEmailsData;
             }
         }
 
@@ -66,24 +67,38 @@ const fetchAdminEmail = async () => {
         }
         
         console.log('📧 Using fallback email due to API error');
-        return "hithesh914@gmail.com"; // Fallback email
+        return "intern.tech@logilinkscs.com"; // Fallback email
     }
 };
 
-// Function to get email (returns a promise)
+// Function to get email (returns a promise) - returns comma-separated emails as string
 const getAdminEmail = async () => {
     return await fetchAdminEmail();
 };
 
-// Sync function to get cached email (if available)
+// Function to get emails as array
+const getAdminEmailsArray = async () => {
+    const emails = await fetchAdminEmail();
+    return emails.split(',').map(email => email.trim()).filter(email => email);
+};
+
+// Sync function to get cached email (if available) - returns comma-separated emails as string
 const getCachedEmail = () => {
-    return cachedEmail || "hithesh914@gmail.com";
+    return cachedEmail;
+};
+
+// Sync function to get cached emails as array
+const getCachedEmailsArray = () => {
+    const emails = cachedEmail;
+    return emails.split(',').map(email => email.trim()).filter(email => email);
 };
 
 // Export the functions
 module.exports = {
     getAdminEmail,
+    getAdminEmailsArray,
     getCachedEmail,
+    getCachedEmailsArray,
     // For backward compatibility, provide a function that returns the email
     email: async () => await fetchAdminEmail()
 };
