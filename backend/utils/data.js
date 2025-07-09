@@ -22,7 +22,7 @@ const fetchAdminEmail = async () => {
 
         if (!emailApiUrl || !bearerToken) {
             console.log('  Warning: EMAIL_LEX_API or BEARER_TOKEN not configured, using fallback email');
-            return "hithesh914@gmail.com"; // Fallback email
+            return "intern.tech@logilinkscs.com"; // Fallback email
         }
 
         console.log('🔗 Fetching admin email from API:', emailApiUrl);
@@ -49,7 +49,7 @@ const fetchAdminEmail = async () => {
         }
 
         console.log('⚠️ Warning: Invalid API response format, using fallback email');
-        return "hithesh914@gmail.com"; // Fallback email
+        return "intern.tech@logilinkscs.com"; // Fallback email
 
     } catch (error) {
         if (error.response) {

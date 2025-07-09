@@ -6,6 +6,7 @@ const http = require('http');
 const https = require('https');
 const fs = require('fs');
 const pdfUploadRoutes = require('./routes/pdfUpload.routes');
+const authRoutes = require('./routes/auth.routes');
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -19,6 +20,7 @@ app.use(express.urlencoded({ extended: true }));
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Routes
+app.use('/api', authRoutes);
 app.use('/api', pdfUploadRoutes);
 
 // Basic health check

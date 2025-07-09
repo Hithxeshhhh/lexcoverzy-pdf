@@ -3,6 +3,7 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 const { validateApiKey, validateAdminApiKey, uploadPolicyPDF } = require('../controllers/policyUpload.controller');
+const { verifyToken } = require('../middleware/auth.middleware');
 
 const router = express.Router();
 
@@ -68,11 +69,57 @@ const upload = multer({
 
 // === ROUTES ===
 
-// Main upload endpoint
-router.post('/upload-policy-pdf', validateApiKey, upload.single('file'), uploadPolicyPDF);
+// Combined authentication middleware - supports both API key and JWT
+const authenticateRequest = (req, res, next) => {
+    const apiKey = req.headers['x-api-key'] || req.headers['X-API-Key'];
+    const authHeader = req.headers.authorization;
+    
+    // If API key is provided, use API key validation
+    if (apiKey) {
+        return validateApiKey(req, res, next);
+    }
+    
+    // If Authorization header is provided, use JWT validation
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+        return verifyToken(req, res, next);
+    }
+    
+    // No valid authentication method provided
+    return res.status(401).json({
+        success: false,
+        error: 'Authentication required',
+        hint: 'Provide either x-api-key header or Authorization Bearer token'
+    });
+};
 
-// Get list of uploaded files
-router.get('/list-pdfs', validateAdminApiKey, (req, res) => {
+// Combined admin authentication middleware
+const authenticateAdminRequest = (req, res, next) => {
+    const apiKey = req.headers['x-api-key'] || req.headers['X-API-Key'];
+    const authHeader = req.headers.authorization;
+    
+    // If API key is provided, use admin API key validation
+    if (apiKey) {
+        return validateAdminApiKey(req, res, next);
+    }
+    
+    // If Authorization header is provided, use JWT validation
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+        return verifyToken(req, res, next);
+    }
+    
+    // No valid authentication method provided
+    return res.status(401).json({
+        success: false,
+        error: 'Admin authentication required',
+        hint: 'Provide either x-api-key header or Authorization Bearer token'
+    });
+};
+
+// Main upload endpoint - supports both API key and JWT authentication
+router.post('/upload-policy-pdf', authenticateRequest, upload.single('file'), uploadPolicyPDF);
+
+// Get list of uploaded files - supports both API key and JWT authentication
+router.get('/list-pdfs', authenticateAdminRequest, (req, res) => {
     try {
         const uploadsDir = path.join(__dirname, '../uploads/coverzy/');
         
@@ -141,7 +188,7 @@ router.get('/list-pdfs', validateAdminApiKey, (req, res) => {
 });
 
 // Get specific file information
-router.get('/pdf-info/:filename', validateAdminApiKey, (req, res) => {
+router.get('/pdf-info/:filename', authenticateAdminRequest, (req, res) => {
     try {
         const filename = req.params.filename;
         const filePath = path.join(__dirname, '../uploads/coverzy/', filename);
@@ -184,7 +231,7 @@ router.get('/pdf-info/:filename', validateAdminApiKey, (req, res) => {
 });
 
 // Download specific file by policy ID
-router.get('/download-pdf/:policy_id', validateAdminApiKey, (req, res) => {
+router.get('/download-pdf/:policy_id', authenticateAdminRequest, (req, res) => {
     try {
         const { policy_id } = req.params;
         
@@ -269,7 +316,7 @@ router.get('/download-pdf/:policy_id', validateAdminApiKey, (req, res) => {
 });
 
 // Delete specific file
-router.delete('/delete-pdf/:filename', validateAdminApiKey, (req, res) => {
+router.delete('/delete-pdf/:filename', authenticateAdminRequest, (req, res) => {
     try {
         const filename = req.params.filename;
         const filePath = path.join(__dirname, '../uploads/coverzy/', filename);
@@ -302,7 +349,7 @@ router.delete('/delete-pdf/:filename', validateAdminApiKey, (req, res) => {
 });
 
 // Health check for upload service
-router.get('/upload-status', validateAdminApiKey, (req, res) => {
+router.get('/upload-status', authenticateAdminRequest, (req, res) => {
     const uploadsDir = path.join(__dirname, '../uploads/coverzy/');
     const dirExists = fs.existsSync(uploadsDir);
     
