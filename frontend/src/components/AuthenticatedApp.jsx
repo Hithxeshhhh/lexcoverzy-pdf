@@ -129,7 +129,7 @@ function AuthenticatedApp() {
                 </svg>
               </div>
               <div className="text-left">
-                <p className="text-sm font-semibold text-gray-900">Welcome, {user?.username}</p>
+                <p className="text-sm font-semibold text-gray-900 mr-3">Welcome, {user?.username}</p>
                 <p className="text-xs text-gray-500">Admin Access</p>
               </div>
             </div>
